@@ -1,2 +1,2 @@
 # NAP-MPFD
-This Branch is kept for Deep Learning Algorithm Development Purpose ONLY.
+This Branch is kept for UAV & Arduino interface codes ONLY.
