@@ -1,0 +1,6 @@
+# contrib build, not plain opencv-python -- guarantees cv2.aruco is present
+# regardless of OpenCV version (this repo's system OpenCV is 4.6, which lacks
+# the newer generateImageMarker/ArucoDetector API but works fine via the
+# fallback path generate_target.py already uses).
+opencv-contrib-python
+numpy

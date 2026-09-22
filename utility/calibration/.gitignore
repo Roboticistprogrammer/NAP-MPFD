@@ -1,0 +1,11 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# generated per calibration session, not source
+ruler.png
+target.png
+target.yaml
+*.bag
+calib_bag/
