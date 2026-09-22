@@ -1,0 +1,8 @@
+# Baseline for data exploration / feature engineering — framework-agnostic,
+# needed regardless of which DL library gets picked (see README.md "Open
+# questions"). Add torch / tensorflow yourself once that's decided.
+numpy
+pandas
+scikit-learn
+matplotlib
+jupyter
