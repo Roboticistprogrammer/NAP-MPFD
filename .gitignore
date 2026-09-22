@@ -1,0 +1,37 @@
+# colcon build artifacts
+build/
+install/
+log/
+
+# kept local only — separate sim-focused repo, not part of this workspace's history
+dronex_ws_sim_reference/
+
+# local tool config, machine-specific
+.claude/
+
+# editor/OS cruft
+*.swp
+*.swo
+*.*~
+.idea
+.vscode
+__pycache__/
+*.pyc
+.venv/
+
+# inherited from open_vins upstream
+cmake-build-*
+Build
+doxgen_generated
+doc
+
+# ~380MB of public-benchmark ground-truth (KAIST/EuRoC/TUM-VI/UZH-FPV) — irrelevant to
+# real-hardware D435+PX4 VIO, kept locally but not worth the repo weight. package.xml/
+# CMakeLists.txt stay tracked so the colcon package itself still exists.
+src/open_vins/ov_data/*
+!src/open_vins/ov_data/package.xml
+!src/open_vins/ov_data/CMakeLists.txt
+
+# same rationale, different location: 7.4MB upstream eval-demo ground-truth file,
+# not something this project generated or needs
+src/open_vins/ov_eval/example/stamped_groundtruth.txt
