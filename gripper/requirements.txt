@@ -1,0 +1,4 @@
+# Shared by every Python tool under gripper/ — one venv for the whole
+# subsystem (see README.md §2). pyserial: logger/ + gui/. flask: gui/ only.
+flask
+pyserial

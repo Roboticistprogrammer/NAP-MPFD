@@ -1,0 +1,2 @@
+host_timestamp,device_t_us,trial_id,object_id,scenario_id,condition_label,axis1_deg,axis2_deg,axis3_deg,axis4_deg,axis5_deg,grip_state,notes
+2026-08-04T08:38:32.854,768961556,T0002,OBJ-F,SC-01,normal,55,110,73,102,28,open,

@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ArmBot Control</title>
+<style>
+  :root {
+    --bg: #14140f;
+    --panel: #1e1e17;
+    --brass: #cbb26a;
+    --brass-dim: #7a6c3f;
+    --text: #eee8d5;
+    --text-dim: #9a9584;
+    --green: #4caf50;
+    --red: #d9534f;
+    --amber: #e0a72b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    padding-top: max(16px, env(safe-area-inset-top, 0px));
+  }
+  h1 {
+    text-align: center;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+  }
+  .subtitle { text-align: center; color: var(--text-dim); font-size: 0.85rem; margin-bottom: 16px; }
+
+  .banner {
+    display: flex; align-items: center; gap: 8px; justify-content: center;
+    padding: 8px 12px; border-radius: 8px; margin-bottom: 16px;
+    font-size: 0.9rem; max-width: 600px; margin-left: auto; margin-right: auto;
+  }
+  .banner.ok { background: rgba(76,175,80,0.12); border: 1px solid var(--green); }
+  .banner.bad { background: rgba(217,83,79,0.12); border: 1px solid var(--red); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .dot.ok { background: var(--green); }
+  .dot.bad { background: var(--red); }
+
+  .board {
+    max-width: 720px; margin: 0 auto;
+    background: var(--panel);
+    border: 1px solid #3a3627;
+    border-radius: 16px;
+    padding: 20px;
+  }
+
+  .axes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .axis {
+    background: #17170f;
+    border: 1px solid #332f1f;
+    border-radius: 12px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+  .axis.gripper { border-color: var(--brass); box-shadow: 0 0 0 1px var(--brass) inset; }
+  .axis-name {
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .axis.gripper .axis-name { color: var(--brass); }
+  .axis-value {
+    font-variant-numeric: tabular-nums;
+    font-size: 1.1rem;
+    margin-top: 6px;
+  }
+  .axis-note { font-size: 0.65rem; color: var(--text-dim); margin-top: 4px; min-height: 1em; }
+
+  input[type=range] {
+    writing-mode: vertical-lr;
+    direction: rtl;
+    width: 32px;
+    height: 130px;
+    accent-color: var(--brass);
+    background: transparent;
+  }
+  .axis.gripper input[type=range] { accent-color: var(--amber); }
+  input[type=range]:disabled { opacity: 0.4; }
+
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+  }
+  button {
+    font: inherit;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--brass-dim);
+    background: #262215;
+    color: var(--text);
+    cursor: pointer;
+  }
+  button.primary { background: var(--brass); color: #1a1a10; font-weight: 600; border-color: var(--brass); }
+  button.danger { border-color: var(--red); color: var(--red); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .status-row {
+    display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;
+    font-size: 0.85rem; color: var(--text-dim);
+  }
+  .led-row { display: flex; align-items: center; gap: 6px; }
+  .led {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: #3a3627; border: 1px solid #55503a;
+  }
+  .led.on.record { background: var(--red); border-color: var(--red); }
+  .led.on.start { background: var(--green); border-color: var(--green); }
+
+  .grip-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 999px;
+    font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em;
+    background: #332f1f; color: var(--text);
+  }
+  .notice {
+    text-align: center; color: var(--amber); font-size: 0.85rem; min-height: 1.2em; margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Armbot Control Board</h1>
+<div class="subtitle">Web jog panel — BAP / gripper</div>
+
+<div id="banner" class="banner bad">
+  <span class="dot bad" id="banner-dot"></span>
+  <span id="banner-text">Connecting…</span>
+</div>
+
+<div class="board">
+  <div class="axes">
+    {% for name in axis_names %}
+    <div class="axis {{ 'gripper' if loop.index0 == gripper_axis else '' }}" data-axis="{{ loop.index0 }}">
+      <div class="axis-name">{{ name }}</div>
+      <input type="range" min="0" max="180" value="90" id="slider-{{ loop.index0 }}" disabled>
+      <div class="axis-value" id="value-{{ loop.index0 }}">90&deg;</div>
+      <div class="axis-note">{{ 'no servo attached' if name == 'unused' else '' }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="controls">
+    <button class="primary" id="btn-enable">Enable Playback Control</button>
+    <button class="danger" id="btn-release" disabled>Release to Manual (Pots)</button>
+  </div>
+
+  <div class="status-row">
+    <span>Mode: <strong id="mode-text">MANUAL</strong></span>
+    <span>Grip: <span class="grip-badge" id="grip-badge">unknown</span></span>
+    <span class="led-row">Record <span class="led" id="led-record"></span></span>
+    <span class="led-row">Start <span class="led" id="led-start"></span></span>
+  </div>
+
+  <div class="notice" id="notice"></div>
+</div>
+
+<script>
+const NUM_AXES = {{ axis_names|length }};
+const GRIPPER_AXIS = {{ gripper_axis }};
+const UNUSED_AXIS = NUM_AXES - 1;
+
+let controlEnabled = false;
+let lastSetpointSent = 0;
+const SETPOINT_THROTTLE_MS = 60;
+
+const sliders = [];
+for (let i = 0; i < NUM_AXES; i++) sliders.push(document.getElementById('slider-' + i));
+const values = [];
+for (let i = 0; i < NUM_AXES; i++) values.push(document.getElementById('value-' + i));
+
+const banner = document.getElementById('banner');
+const bannerDot = document.getElementById('banner-dot');
+const bannerText = document.getElementById('banner-text');
+const btnEnable = document.getElementById('btn-enable');
+const btnRelease = document.getElementById('btn-release');
+const modeText = document.getElementById('mode-text');
+const gripBadge = document.getElementById('grip-badge');
+const ledRecord = document.getElementById('led-record');
+const ledStart = document.getElementById('led-start');
+const notice = document.getElementById('notice');
+
+function setNotice(msg) {
+  notice.textContent = msg || '';
+  if (msg) setTimeout(() => { if (notice.textContent === msg) notice.textContent = ''; }, 4000);
+}
+
+function applyTelemetry(state) {
+  banner.className = 'banner ' + (state.connected ? 'ok' : 'bad');
+  bannerDot.className = 'dot ' + (state.connected ? 'ok' : 'bad');
+  bannerText.textContent = state.connected ? 'Connected' : 'Not connected — check the USB serial cable';
+
+  // Firmware-side abort (physical RECORD press during playback) flips mode
+  // back to MANUAL on its own; mirror that here even if we never asked for it.
+  if (controlEnabled && state.mode !== 'P') {
+    controlEnabled = false;
+    setNotice('Playback aborted (RECORD button pressed on the board) — control released.');
+  }
+
+  modeText.textContent = state.mode === 'P' ? 'PLAYBACK' : 'MANUAL';
+  gripBadge.textContent = state.grip_state;
+  ledRecord.className = 'led' + (state.record_btn ? ' on record' : '');
+  ledStart.className = 'led' + (state.start_btn ? ' on start' : '');
+
+  btnEnable.disabled = !state.connected || controlEnabled;
+  btnRelease.disabled = !state.connected || !controlEnabled;
+
+  // While we don't hold control, sliders mirror the live pot positions —
+  // so "Enable" always starts from wherever the arm actually is right now.
+  if (!controlEnabled) {
+    state.angles.forEach((deg, i) => {
+      sliders[i].value = deg;
+      values[i].textContent = deg + '°';
+    });
+  }
+}
+
+async function poll() {
+  try {
+    const res = await fetch('/api/state');
+    const state = await res.json();
+    applyTelemetry(state);
+  } catch (e) {
+    banner.className = 'banner bad';
+    bannerDot.className = 'dot bad';
+    bannerText.textContent = 'Lost connection to GUI server';
+  } finally {
+    setTimeout(poll, 200);
+  }
+}
+
+async function sendMode(mode) {
+  const res = await fetch('/api/mode', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({mode})
+  });
+  return res.ok;
+}
+
+async function sendSetpoint() {
+  const angles = sliders.map((s, i) => i === UNUSED_AXIS ? parseInt(s.value, 10) : parseInt(s.value, 10));
+  await fetch('/api/setpoint', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({angles})
+  });
+}
+
+btnEnable.addEventListener('click', async () => {
+  const ok = await sendMode('P');
+  if (ok) {
+    controlEnabled = true;
+    sliders.forEach((s, i) => { if (i !== UNUSED_AXIS) s.disabled = false; });
+    setNotice('Playback control enabled — sliders now drive the servos.');
+  } else {
+    setNotice('Could not enable playback control (not connected?).');
+  }
+});
+
+btnRelease.addEventListener('click', async () => {
+  await sendMode('M');
+  controlEnabled = false;
+  sliders.forEach(s => s.disabled = true);
+  setNotice('Released back to manual (potentiometer) control.');
+});
+
+sliders.forEach((slider, i) => {
+  slider.addEventListener('input', () => {
+    values[i].textContent = slider.value + '°';
+    if (!controlEnabled) return;
+    const now = Date.now();
+    if (now - lastSetpointSent < SETPOINT_THROTTLE_MS) return;
+    lastSetpointSent = now;
+    sendSetpoint();
+  });
+});
+
+poll();
+</script>
+</body>
+</html>
