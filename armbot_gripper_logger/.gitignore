@@ -1,0 +1,4 @@
+#ignore files
+
+.vscode/
+*__pycache__/
