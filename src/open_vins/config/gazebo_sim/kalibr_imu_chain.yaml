@@ -1,0 +1,43 @@
+%YAML:1.0
+
+# PX4's own flight-controller IMU (base_link/sensor/imu_sensor), bridged as /d435i/imu.
+# Noise values converted from the Gaussian per-sample stddevs in x500_base/model.sdf's
+# imu_sensor block (discrete_stddev / sqrt(update_rate) -> continuous-time noise density,
+# update_rate=250Hz per that SDF). The SDF models no bias drift at all (no random-walk term
+# defined), so random_walk below is a small nominal placeholder for filter stability, not a
+# measured value -- unlike accelerometer/gyroscope_noise_density, which come directly from
+# the sim's own configured sensor noise.
+imu0:
+  T_i_b:
+    - [1.0, 0.0, 0.0, 0.0]
+    - [0.0, 1.0, 0.0, 0.0]
+    - [0.0, 0.0, 1.0, 0.0]
+    - [0.0, 0.0, 0.0, 1.0]
+  accelerometer_noise_density: 0.000413
+  accelerometer_random_walk: 0.0001
+  gyroscope_noise_density: 0.0000552
+  gyroscope_random_walk: 0.00001
+  rostopic: /d435i/imu
+  time_offset: 0.0
+  update_rate: 250
+  model: "kalibr"
+  Tw:
+    - [1.0, 0.0, 0.0]
+    - [0.0, 1.0, 0.0]
+    - [0.0, 0.0, 1.0]
+  R_IMUtoGYRO:
+    - [1.0, 0.0, 0.0]
+    - [0.0, 1.0, 0.0]
+    - [0.0, 0.0, 1.0]
+  Ta:
+    - [1.0, 0.0, 0.0]
+    - [0.0, 1.0, 0.0]
+    - [0.0, 0.0, 1.0]
+  R_IMUtoACC:
+    - [1.0, 0.0, 0.0]
+    - [0.0, 1.0, 0.0]
+    - [0.0, 0.0, 1.0]
+  Tg:
+    - [0.0, 0.0, 0.0]
+    - [0.0, 0.0, 0.0]
+    - [0.0, 0.0, 0.0]

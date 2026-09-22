@@ -1,0 +1,37 @@
+%YAML:1.0
+
+# Stereo D435i camera on the x500_d435i simulated vehicle (docker/px4_patch/models/D435i).
+# Intrinsics read directly from the live /d435i/infra{1,2}/camera_info topics (ideal pinhole,
+# zero distortion -- Gazebo's synthetic camera has none). Extrinsics derived from the SDF pose
+# chain (x500_base's imu_sensor at base_link origin, zero rotation) -> CameraJoint (x500_d435i
+# model.sdf, base_link->camera_link, translation-only) -> per-sensor pose (D435i model.sdf,
+# translation-only). No SDF rotation offsets exist anywhere in that chain -- the only rotation
+# here is the fixed body(REP103: X-fwd,Y-left,Z-up)->optical(X-right,Y-down,Z-fwd) convention,
+# visually confirmed against a captured infra1 frame (clean horizon, sky up/ground down).
+
+cam0: # infra1 (left, +Y/left side of camera_link)
+  T_imu_cam: #rotation from camera to IMU R_CtoI, position of camera in IMU p_CinI
+    - [0.0, 0.0, 1.0, 0.13]
+    - [-1.0, 0.0, 0.0, 0.055]
+    - [0.0, -1.0, 0.0, 0.242]
+    - [0.0, 0.0, 0.0, 1.0]
+  cam_overlaps: [1]
+  camera_model: pinhole
+  distortion_coeffs: [0.0, 0.0, 0.0, 0.0]
+  distortion_model: radtan
+  intrinsics: [337.2219467163086, 337.22193717956543, 320.0, 240.0]
+  resolution: [640, 480]
+  rostopic: /d435i/infra1/image_raw
+cam1: # infra2 (right, -Y side of camera_link), 50mm baseline from cam0
+  T_imu_cam:
+    - [0.0, 0.0, 1.0, 0.13]
+    - [-1.0, 0.0, 0.0, 0.005]
+    - [0.0, -1.0, 0.0, 0.242]
+    - [0.0, 0.0, 0.0, 1.0]
+  cam_overlaps: [0]
+  camera_model: pinhole
+  distortion_coeffs: [0.0, 0.0, 0.0, 0.0]
+  distortion_model: radtan
+  intrinsics: [337.2219467163086, 337.22193717956543, 320.0, 240.0]
+  resolution: [640, 480]
+  rostopic: /d435i/infra2/image_raw
