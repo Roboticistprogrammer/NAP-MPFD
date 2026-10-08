@@ -1,3 +1,5 @@
+import math
+
 import rclpy
 import rclpy.time
 from rclpy.node import Node
@@ -69,10 +71,25 @@ class VioPx4Bridge(Node):
         gravity-aligned, arbitrary-heading world frame -> PX4's NED), not the body
         frame. See _enu_orientation_to_ned's docstring for the one part of this that
         still needs real-motion verification.
+
+        OpenVINS's odomimu twist.linear is R_GtoI * v_IinG, i.e. already in the IMU
+        (= FRD body) frame, not the world frame (ov_msckf Propagator::fast_state_propagate),
+        so it is sent as VELOCITY_FRAME_BODY_FRD unconverted.
+
+        Diverged estimates (non-finite, or beyond max_position_m / max_speed_m_s) are
+        dropped rather than forwarded. reset_counter is bumped whenever the OpenVINS
+        stream restarts (stamp goes backwards or pauses > reset_gap_s), since a restarted
+        OpenVINS has a new world frame and PX4 must not treat the jump as motion.
     """
 
     def __init__(self):
         super().__init__('vio_px4_bridge')
+
+        self.max_position_m = self.declare_parameter('max_position_m', 500.0).value
+        self.max_speed_m_s = self.declare_parameter('max_speed_m_s', 20.0).value
+        self.reset_gap_s = self.declare_parameter('reset_gap_s', 0.5).value
+        self.reset_counter = 0
+        self.last_stamp_ns = None
 
         self.imu_pub = self.create_publisher(Imu, '/d435i/imu', 10)
         self.create_subscription(
@@ -112,20 +129,38 @@ class VioPx4Bridge(Node):
         self.imu_pub.publish(imu)
 
     def _on_vio_odom(self, msg: Odometry):
+        p = msg.pose.pose.position
+        q = msg.pose.pose.orientation
+        v = msg.twist.twist.linear
+        values = (p.x, p.y, p.z, q.x, q.y, q.z, q.w, v.x, v.y, v.z)
+        if (not all(math.isfinite(x) for x in values)
+                or math.hypot(p.x, p.y, p.z) > self.max_position_m
+                or math.hypot(v.x, v.y, v.z) > self.max_speed_m_s):
+            self.get_logger().warn(
+                f'dropping diverged OpenVINS estimate: |p| = {math.hypot(p.x, p.y, p.z):.1f} m, '
+                f'|v| = {math.hypot(v.x, v.y, v.z):.1f} m/s -- restart OpenVINS',
+                throttle_duration_sec=2.0)
+            return
+
+        stamp_ns = rclpy.time.Time.from_msg(msg.header.stamp).nanoseconds
+        if self.last_stamp_ns is not None and (
+                stamp_ns <= self.last_stamp_ns or stamp_ns - self.last_stamp_ns > self.reset_gap_s * 1e9):
+            self.reset_counter = (self.reset_counter + 1) % 256
+            self.get_logger().info(f'OpenVINS stream restarted -- reset_counter = {self.reset_counter}')
+        self.last_stamp_ns = stamp_ns
+
         out = VehicleOdometry()
         out.timestamp = int(self.get_clock().now().nanoseconds / 1000)
-        out.timestamp_sample = int(rclpy.time.Time.from_msg(msg.header.stamp).nanoseconds / 1000)
+        out.timestamp_sample = int(stamp_ns / 1000)
 
         out.pose_frame = VehicleOdometry.POSE_FRAME_NED
-        p = msg.pose.pose.position
         out.position[0], out.position[1], out.position[2] = _enu_to_ned(p.x, p.y, p.z)
 
-        q = msg.pose.pose.orientation
         out.q[0], out.q[1], out.q[2], out.q[3] = _enu_orientation_to_ned(q.x, q.y, q.z, q.w)
 
-        out.velocity_frame = VehicleOdometry.VELOCITY_FRAME_NED
-        v = msg.twist.twist.linear
-        out.velocity[0], out.velocity[1], out.velocity[2] = _enu_to_ned(v.x, v.y, v.z)
+        # Body-frame velocity, already FRD (see class docstring) -- no world conversion.
+        out.velocity_frame = VehicleOdometry.VELOCITY_FRAME_BODY_FRD
+        out.velocity[0], out.velocity[1], out.velocity[2] = float(v.x), float(v.y), float(v.z)
 
         # Already FRD-native (unconverted IMU input, see class docstring).
         av = msg.twist.twist.angular
@@ -133,9 +168,11 @@ class VioPx4Bridge(Node):
         out.angular_velocity[1] = float(av.y)
         out.angular_velocity[2] = float(av.z)
 
+        # Position variance follows the ENU->NED axis swap (x<->y); orientation and
+        # velocity variances are body-frame and pass through.
         pcov = msg.pose.covariance
-        out.position_variance[0] = float(pcov[0])
-        out.position_variance[1] = float(pcov[7])
+        out.position_variance[0] = float(pcov[7])
+        out.position_variance[1] = float(pcov[0])
         out.position_variance[2] = float(pcov[14])
         out.orientation_variance[0] = float(pcov[21])
         out.orientation_variance[1] = float(pcov[28])
@@ -146,7 +183,7 @@ class VioPx4Bridge(Node):
         out.velocity_variance[1] = float(tcov[7])
         out.velocity_variance[2] = float(tcov[14])
 
-        out.reset_counter = 0
+        out.reset_counter = self.reset_counter
         out.quality = 0  # OpenVINS reports no normalized quality metric; PX4 treats 0 as "unknown"
 
         self.odom_pub.publish(out)
