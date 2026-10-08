@@ -21,6 +21,9 @@
 
 #include "ROS2Visualizer.h"
 
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
+
 #include "core/VioManager.h"
 #include "ros/ROSVisualizerHelper.h"
 #include "sim/Simulator.h"
@@ -65,6 +68,9 @@ ROS2Visualizer::ROS2Visualizer(std::shared_ptr<rclcpp::Node> node, std::shared_p
   // Our tracking image
   it_pub_tracks = it.advertise("trackhist", 2);
   PRINT_DEBUG("Publishing: %s\n", it_pub_tracks.getTopic().c_str());
+  // Half-size JPEG of the same image at <= 5 Hz, for viewing over WiFi (raw trackhist is ~55 MB/s)
+  pub_tracks_preview = node->create_publisher<sensor_msgs::msg::CompressedImage>("trackhist_preview", 1);
+  PRINT_DEBUG("Publishing: %s\n", pub_tracks_preview->get_topic_name());
 
   // Groundtruth publishers
   pub_posegt = node->create_publisher<geometry_msgs::msg::PoseStamped>("posegt", 2);
@@ -653,22 +659,38 @@ void ROS2Visualizer::publish_images() {
   last_visualization_timestamp_image = _app->get_state()->_timestamp;
 
   // Check if we have subscribers
-  if (it_pub_tracks.getNumSubscribers() == 0)
+  bool want_full = it_pub_tracks.getNumSubscribers() != 0;
+  bool want_preview = pub_tracks_preview->get_subscription_count() != 0 &&
+                      (_node->now() - last_tracks_preview_time).seconds() >= 0.2;
+  if (!want_full && !want_preview)
     return;
 
-  // Get our image of history tracks
-  cv::Mat img_history = _app->get_historical_viz_image();
-  if (img_history.empty())
-    return;
-
-  // Create our message
+  // Create our message header
   std_msgs::msg::Header header;
   header.stamp = _node->now();
   header.frame_id = "cam0";
-  sensor_msgs::msg::Image::SharedPtr exl_msg = cv_bridge::CvImage(header, "bgr8", img_history).toImageMsg();
 
-  // Publish
-  it_pub_tracks.publish(exl_msg);
+  // Full image of history tracks
+  if (want_full) {
+    cv::Mat img_history = _app->get_historical_viz_image();
+    if (!img_history.empty())
+      it_pub_tracks.publish(cv_bridge::CvImage(header, "bgr8", img_history).toImageMsg());
+  }
+
+  // Preview: current features only (the history drawing slows tracking), half size, JPEG
+  if (want_preview) {
+    last_tracks_preview_time = _node->now();
+    cv::Mat img_active = _app->get_active_viz_image();
+    if (img_active.empty())
+      return;
+    cv::Mat small;
+    cv::resize(img_active, small, cv::Size(), 0.5, 0.5, cv::INTER_AREA);
+    sensor_msgs::msg::CompressedImage preview;
+    preview.header = header;
+    preview.format = "jpeg";
+    cv::imencode(".jpg", small, preview.data, {cv::IMWRITE_JPEG_QUALITY, 60});
+    pub_tracks_preview->publish(preview);
+  }
 }
 
 void ROS2Visualizer::publish_features() {

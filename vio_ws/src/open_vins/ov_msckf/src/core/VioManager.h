@@ -113,6 +113,15 @@ public:
   /// Get a nice visualization image of what tracks we have
   cv::Mat get_historical_viz_image();
 
+  /// Current features only, no track history: cheap enough for a live preview. get_historical_viz_image() clones
+  /// every feature out of the database, and tracking waits on that lock (frame time 21 -> 36 ms on a Pi 5).
+  cv::Mat get_active_viz_image() {
+    cv::Mat img;
+    if (trackFEATS != nullptr)
+      trackFEATS->display_active(img, 255, 255, 0, 255, 255, 255, !is_initialized_vio ? "init" : (did_zupt_update ? "zvupt" : ""));
+    return img;
+  }
+
   /// Returns 3d SLAM features in the global frame
   std::vector<Eigen::Vector3d> get_features_SLAM();
 

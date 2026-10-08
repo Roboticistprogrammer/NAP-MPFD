@@ -33,6 +33,7 @@
 #include <nav_msgs/msg/path.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
+#include <sensor_msgs/msg/compressed_image.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
@@ -146,6 +147,7 @@ protected:
 
   // Our publishers
   image_transport::Publisher it_pub_tracks, it_pub_loop_img_depth, it_pub_loop_img_depth_color;
+  rclcpp::Publisher<sensor_msgs::msg::CompressedImage>::SharedPtr pub_tracks_preview;
   rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr pub_poseimu;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub_odomimu;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr pub_pathimu;
@@ -194,6 +196,7 @@ protected:
   // Last timestamp we visualized at
   double last_visualization_timestamp = 0;
   double last_visualization_timestamp_image = 0;
+  rclcpp::Time last_tracks_preview_time{0, 0, RCL_ROS_TIME};
 
   // Our groundtruth states
   std::map<double, Eigen::Matrix<double, 17, 1>> gt_states;
