@@ -1,0 +1,11 @@
+# realsense2_camera parameters for flying VIO (07_start_vio.sh), passed as rs_launch.py config_file.
+# Differs from realsense_calib.yaml on purpose: the calibration's fixed 3000 us exposure gave
+# near-black frames indoors (mean 19/255, zero FAST corners) and OpenVINS diverged to km-scale.
+# - Emitter OFF: the IR dot pattern moves with the camera and would be tracked as fake features.
+# - Auto exposure, capped at 10 ms to bound motion blur (mean ~87/255 in the living room).
+#   Lower the cap if fast motion blurs; raise it (or add light) if images get dark.
+depth_module.emitter_enabled: 0
+depth_module.enable_auto_exposure: true
+depth_module.auto_exposure_limit_toggle: true
+depth_module.auto_exposure_limit: 10000
+enable_sync: true
