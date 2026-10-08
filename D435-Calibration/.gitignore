@@ -1,0 +1,8 @@
+bags/
+logs/
+.venv/
+docker/build.log
+__pycache__/
+*.pyc
+# Kalibr report PDFs are ~12 MB each; the yaml/txt results are what the pipeline uses
+results/**/*.pdf

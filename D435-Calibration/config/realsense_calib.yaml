@@ -1,0 +1,8 @@
+# Extra realsense2_camera parameters for calibration recordings (passed as rs_launch.py config_file).
+# - Emitter OFF: the IR dot projector is visible to infra1/infra2 and breaks Aprilgrid detection.
+# - Manual, short exposure: limits motion blur during the fast IMU-excitation motions.
+#   Raise exposure (microseconds) if the images are too dark under your lighting.
+depth_module.emitter_enabled: 0
+depth_module.enable_auto_exposure: false
+depth_module.exposure: 3000
+enable_sync: true

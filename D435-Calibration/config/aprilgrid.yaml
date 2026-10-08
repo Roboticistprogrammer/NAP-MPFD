@@ -1,0 +1,14 @@
+# Kalibr Aprilgrid target -- Spectacular AI "AprilGrid 6x6"
+# (https://spectacularai.github.io/docs/other/calibration_target.html), printed from the
+# browser on A4. That page scales the grid to the window, so there is no nominal size:
+# tagSize below is ESTIMATED from the A4 PDF (tag 93 px of 924 px page width -> ~21.1 mm).
+# MEASURE one black tag edge (outer black border, not the small corner squares) on the
+# actual print and correct tagSize -- a 1 % error here is a 1 % scale error in the results.
+#
+# tagSize:    edge length of one black tag [m]
+# tagSpacing: gap between tags / tagSize (ratio) -- 28 px gap / 93 px tag = 0.30
+target_type: 'aprilgrid'
+tagCols: 6
+tagRows: 6
+tagSize: 0.0211
+tagSpacing: 0.3

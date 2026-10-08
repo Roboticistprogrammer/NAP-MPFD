@@ -1,0 +1,15 @@
+# Kalibr IMU config for the Pixhawk 6C IMU as seen through /fmu/out/sensor_combined.
+#
+# Starting values: ICM-42688-P datasheet noise densities, inflated for PX4's
+# on-board low-pass filtering and airframe vibration (Kalibr advises inflating
+# datasheet values). Replace them with Allan variance results
+# (02_record.sh static) once you have them.
+#
+# Units: noise density [unit/sqrt(Hz)], random walk [unit/s/sqrt(Hz)]
+rostopic: /calib/imu
+update_rate: 100.0                    # Hz -- measured ~100 Hz on this FC; check with `ros2 topic hz /calib/imu`
+
+accelerometer_noise_density: 2.0e-03  # [m/s^2/sqrt(Hz)]  (datasheet 6.9e-04)
+accelerometer_random_walk: 3.0e-03    # [m/s^3/sqrt(Hz)]
+gyroscope_noise_density: 2.0e-04      # [rad/s/sqrt(Hz)]  (datasheet 4.9e-05)
+gyroscope_random_walk: 2.0e-05        # [rad/s^2/sqrt(Hz)]
