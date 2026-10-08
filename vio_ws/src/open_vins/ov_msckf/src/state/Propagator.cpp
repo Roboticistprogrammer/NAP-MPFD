@@ -98,7 +98,13 @@ void Propagator::propagate_and_clone(std::shared_ptr<State> state, double timest
       dt_summed += prop_data.at(i + 1).timestamp - prop_data.at(i).timestamp;
     }
   }
-  assert(std::abs((time1 - time0) - dt_summed) < 1e-4);
+  // Was an assert: with asserts compiled in (no -DNDEBUG) it aborted the node mid-flight on the D435/PX4 setup
+  // although the IMU stream had no gaps. Warn with the numbers instead so the case can be diagnosed.
+  if (std::abs((time1 - time0) - dt_summed) >= 1e-4) {
+    PRINT_WARNING(YELLOW "[PROP]: IMU covers %.4f s of the %.4f s interval (time0 %.6f, time1 %.6f, prop %.6f -> %.6f, n=%zu)\n" RESET,
+                  dt_summed, time1 - time0, time0, time1, prop_data.empty() ? 0.0 : prop_data.front().timestamp,
+                  prop_data.empty() ? 0.0 : prop_data.back().timestamp, prop_data.size());
+  }
 
   // Last angular velocity (used for cloning when estimating time offset)
   // Remember to correct them before we store them
